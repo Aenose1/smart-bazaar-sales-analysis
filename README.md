@@ -1,6 +1,16 @@
 # SMART BAZAAR SALES ANALYSIS
 > **An Interactive Retail Sales Analytics and Predictive Forecasting System**  
-> *Data Warehousing and Mining (DWM) Project*
+> *Data Warehousing and Mining (DWM) College Mini Project*
+
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_Demo-success?logo=vercel&style=for-the-badge)](https://smart-bazaar-sales-analysis-theta.vercel.app)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Aenose1/smart-bazaar-sales-analysis)
+
+---
+
+## 🌐 Live Deployments
+- **Frontend (Vercel)**: [https://smart-bazaar-sales-analysis-theta.vercel.app](https://smart-bazaar-sales-analysis-theta.vercel.app)
+- **Alternate Vercel URL**: [https://smart-bazaar-sales-analysis-chjp2q5o8-aenose1s-projects.vercel.app](https://smart-bazaar-sales-analysis-chjp2q5o8-aenose1s-projects.vercel.app)
+- **1-Click Render Deploy**: [Deploy Backend to Render](https://render.com/deploy?repo=https://github.com/Aenose1/smart-bazaar-sales-analysis)
 
 ---
 
@@ -61,31 +71,20 @@ Open your browser at `http://localhost:5173`.
 
 ---
 
-## ☁️ Deployment Guide
+## ☁️ Deployment Details
 
-### Deploying Frontend to Vercel
-1. Go to [Vercel](https://vercel.com) and log in with GitHub.
-2. Click **Add New Project** ➔ **Import Git Repository**.
-3. Select `smart-bazaar-sales-analysis`.
-4. Vercel automatically detects the Vite configuration using `vercel.json`:
-   - Framework Preset: **Vite**
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-5. Click **Deploy**.
+### Frontend on Vercel
+Deployed directly from repository via Vercel CLI & GitHub Integration.
+- **Production URL**: [https://smart-bazaar-sales-analysis-theta.vercel.app](https://smart-bazaar-sales-analysis-theta.vercel.app)
+- Automatically redeploys on every `git push` to `main`.
 
 ---
 
-### Deploying Backend to Render
-1. Go to [Render](https://render.com) and sign in.
-2. Click **New +** ➔ **Web Service**.
-3. Connect your GitHub repository: `https://github.com/Aenose1/smart-bazaar-sales-analysis`.
-4. Configure the service:
-   - **Name**: `smart-bazaar-backend`
-   - **Language / Runtime**: `Python 3`
-   - **Root Directory**: leave blank (or `backend`)
-   - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `gunicorn --chdir backend app:app`
-5. Click **Create Web Service**.
+### Backend on Render
+The repository includes a ready-to-run Blueprint [`render.yaml`](render.yaml) and [`backend/Procfile`](backend/Procfile).
+To launch the backend on your Render account:
+1. Click the **[Deploy to Render](https://render.com/deploy?repo=https://github.com/Aenose1/smart-bazaar-sales-analysis)** button or link.
+2. Render automatically reads `render.yaml` and deploys the Flask application with Gunicorn.
 
 ---
 
