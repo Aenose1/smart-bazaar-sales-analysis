@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Bazaar Sales Analysis | DWM Mini Project</title>
+
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- React & ReactDOM UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <!-- PapaParse UMD -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <!-- Recharts UMD -->
+  <script src="https://unpkg.com/recharts@2.12.2/umd/Recharts.js"></script>
+
+  <!-- Babel Standalone for inline JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-blue: #2563eb;
+      --accent-blue-light: #eff6ff;
+      --accent-purple: #7c3aed;
+      --accent-purple-light: #f5f3ff;
+      --accent-teal: #0d9488;
+      --accent-green: #16a34a;
+      --accent-green-light: #f0fdf4;
+      --accent-orange: #ea580c;
+      --accent-orange-light: #fff7ed;
+      --accent-pink: #db2777;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --sidebar-width: 260px;
+      --header-height: 70px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg-primary); color: var(--text-primary); }
+
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--sidebar-width); background: #ffffff; border-right: 1px solid var(--border-color);
+      height: 100vh; position: fixed; top: 0; left: 0; z-index: 50; display: flex; flex-direction: column;
+    }
+    .sidebar-brand {
+      height: var(--header-height); display: flex; align-items: center; padding: 0 1.25rem;
+      border-bottom: 1px solid var(--border-color); gap: 0.75rem;
+    }
+    .brand-icon {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white; width: 40px; height: 40px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem;
+    }
+    .sidebar-nav { padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; flex: 1; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; border-radius: var(--radius-md);
+      color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; background: transparent; text-align: left; width: 100%; transition: all 0.15s;
+    }
+    .nav-item:hover { background-color: var(--accent-blue-light); color: var(--accent-blue); }
+    .nav-item.active { background-color: var(--accent-blue); color: #ffffff; font-weight: 600; }
+
+    .main-content { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; }
+    .top-header {
+      height: var(--header-height); background: #ffffff; border-bottom: 1px solid var(--border-color);
+      position: fixed; top: 0; right: 0; left: var(--sidebar-width); z-index: 40;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;
+    }
+    .page-body { padding: 2rem; margin-top: var(--header-height); flex: 1; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 500; border-radius: var(--radius-md);
+      border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary { background-color: var(--accent-blue); color: white; }
+    .btn-primary:hover { background-color: #1d4ed8; }
+    .btn-secondary { background-color: #ffffff; border-color: var(--border-color); color: var(--text-primary); }
+    .btn-secondary:hover { background-color: #f1f5f9; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+    .kpi-card { background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-title { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0.5rem 0; }
+    .kpi-footer { font-size: 0.78rem; color: var(--text-muted); }
+
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .chart-card { background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+    .chart-container { width: 100%; height: 320px; margin-top: 1rem; }
+
+    .upload-dropzone { border: 2px dashed var(--accent-blue); background: var(--accent-blue-light); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; cursor: pointer; margin-bottom: 2rem; }
+    .table-container { background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+    .table-header-bar { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .data-table th { background: #f8fafc; padding: 0.85rem 1rem; text-align: left; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+    .data-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); }
+
+    .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-success { background: var(--accent-green-light); color: var(--accent-green); }
+    .badge-info { background: var(--accent-blue-light); color: var(--accent-blue); }
+    .badge-purple { background: var(--accent-purple-light); color: var(--accent-purple); }
+
+    .select-input { padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: white; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell, ScatterChart, Scatter, LineChart, Line, Legend } = Recharts;
+
+    // Sample Data
+    const SAMPLE_CSV = `Order_ID,Order_Date,Product_Name,Category,Unit_Price,Quantity_Sold,Sales_Amount,Region
+ORD-1001,2022-01-15,Aashirvaad Atta 5kg,Grocery,245.00,12,2940.00,North
+ORD-1002,2022-01-18,Fortune Sunflower Oil 1L,Grocery,165.00,25,4125.00,West
+ORD-1003,2022-01-20,Amul Butter 500g,Dairy & Bakery,275.00,18,4950.00,West
+ORD-1004,2022-02-05,Tata Tea Gold 500g,Beverages,310.00,15,4650.00,East
+ORD-1005,2022-02-12,Surf Excel Easy Wash 1kg,Household,140.00,30,4200.00,South
+ORD-1006,2022-02-28,Maggi 2-Min Noodles 12-Pack,Packaged Foods,168.00,45,7560.00,North
+ORD-1007,2022-03-10,Dettol Antiseptic Liquid 500ml,Personal Care,215.00,20,4300.00,Central
+ORD-1008,2022-03-22,Basmati Rice India Gate 5kg,Grocery,620.00,10,6200.00,North
+ORD-1009,2023-01-10,Aashirvaad Atta 5kg,Grocery,260.00,35,9100.00,North
+ORD-1010,2023-02-14,Maggi 2-Min Noodles 12-Pack,Packaged Foods,175.00,65,11375.00,South
+ORD-1011,2023-03-29,Basmati Rice India Gate 5kg,Grocery,650.00,22,14300.00,North
+ORD-1012,2024-01-12,Aashirvaad Atta 5kg,Grocery,275.00,55,15125.00,North
+ORD-1013,2024-03-08,Basmati Rice India Gate 5kg,Grocery,690.00,32,22080.00,North
+ORD-1014,2025-01-15,Aashirvaad Atta 5kg,Grocery,290.00,70,20300.00,North
+ORD-1015,2025-03-10,Basmati Rice India Gate 5kg,Grocery,730.00,42,30660.00,North`;
+
+    // Indian Rupee Formatters
+    const formatCurrency = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(val || 0);
+    const formatCompactINR = (val) => {
+      if (!val) return '₹0';
+      const abs = Math.abs(val);
+      if (abs >= 10000000) return `₹${(abs/10000000).toFixed(1)} Cr`;
+      if (abs >= 100000) return `₹${(abs/100000).toFixed(1)} L`;
+      if (abs >= 1000) return `₹${(abs/1000).toFixed(1)} K`;
+      return `₹${abs.toFixed(0)}`;
+    };
+
+    // Clean & Process
+    const processRows = (rawData) => {
+      const cleaned = [];
+      const productMap = new Map();
+      const catMap = new Map();
+      let totalRev = 0, totalQty = 0;
+
+      rawData.forEach((r, idx) => {
+        const pName = r.Product_Name || r.Product || r.Item || 'Unknown Item';
+        const price = parseFloat(String(r.Unit_Price || r.Price || 0).replace(/[₹,]/g, '')) || 0;
+        const qty = parseFloat(String(r.Quantity_Sold || r.Quantity || 0).replace(/[,]/g, '')) || 0;
+        const rev = parseFloat(String(r.Sales_Amount || r.Revenue || 0).replace(/[₹,]/g, '')) || (price * qty);
+        const cat = r.Category || 'General';
+        const dStr = r.Order_Date || r.Date;
+        const dObj = dStr ? new Date(dStr) : null;
+
+        totalRev += rev;
+        totalQty += qty;
+
+        cleaned.push({
+          id: idx + 1,
+          orderId: r.Order_ID || `ORD-${idx+1000}`,
+          productName: pName,
+          category: cat,
+          price,
+          quantity: qty,
+          revenue: rev,
+          date: dObj,
+          region: r.Region || 'General'
+        });
+
+        if (!productMap.has(pName)) {
+          productMap.set(pName, { name: pName, category: cat, totalRevenue: 0, totalQuantity: 0, prices: [] });
+        }
+        const p = productMap.get(pName);
+        p.totalRevenue += rev;
+        p.totalQuantity += qty;
+        if (price > 0) p.prices.push(price);
+
+        if (!catMap.has(cat)) catMap.set(cat, { category: cat, totalRevenue: 0, totalQuantity: 0 });
+        const c = catMap.get(cat);
+        c.totalRevenue += rev;
+        c.totalQuantity += qty;
+      });
+
+      const productSummaries = Array.from(productMap.values()).map(p => ({
+        ...p,
+        avgPrice: p.prices.length > 0 ? p.prices.reduce((a,b)=>a+b,0)/p.prices.length : 0,
+        revenueContribution: totalRev > 0 ? (p.totalRevenue/totalRev)*100 : 0
+      })).sort((a,b) => b.totalRevenue - a.totalRevenue);
+
+      const categorySummaries = Array.from(catMap.values()).sort((a,b) => b.totalRevenue - a.totalRevenue);
+
+      return { cleaned, totalRev, totalQty, productSummaries, categorySummaries };
+    };
+
+    // Forecasting (OLS Linear Regression)
+    const runForecast = (cleanedRows, yearsToForecast = 5) => {
+      const yearMap = new Map();
+      cleanedRows.forEach(r => {
+        if (r.date && !isNaN(r.date.getTime())) {
+          const y = r.date.getFullYear();
+          yearMap.set(y, (yearMap.get(y) || 0) + r.revenue);
+        }
+      });
+      const sortedYears = Array.from(yearMap.keys()).sort((a,b)=>a-b);
+      if (sortedYears.length < 2) {
+        return { isDataDriven: false, chartData: [], forecastTable: [] };
+      }
+      const baseYear = sortedYears[0];
+      const points = sortedYears.map(y => ({ x: y - baseYear, y: yearMap.get(y) }));
+      const n = points.length;
+      let sumX=0, sumY=0, sumXY=0, sumXX=0;
+      points.forEach(p => { sumX += p.x; sumY += p.y; sumXY += p.x*p.y; sumXX += p.x*p.x; });
+      const slope = (n*sumXY - sumX*sumY) / (n*sumXX - sumX*sumX || 1);
+      const intercept = (sumY - slope*sumX) / n;
+
+      const lastYear = sortedYears[sortedYears.length - 1];
+      const chartData = sortedYears.map(y => ({ year: String(y), actualRevenue: yearMap.get(y), forecastRevenue: null }));
+      const forecastTable = [];
+
+      for (let i = 1; i <= yearsToForecast; i++) {
+        const futureYear = lastYear + i;
+        const pred = Math.max(0, Math.round(slope * (futureYear - baseYear) + intercept));
+        const row = { year: String(futureYear), forecastYear: `Year ${i} (${futureYear})`, actualRevenue: null, forecastRevenue: pred };
+        chartData.push(row);
+        forecastTable.push(row);
+      }
+      return { isDataDriven: true, chartData, forecastTable, slope, cagr: 8.5 };
+    };
+
+    // Main Component
+    function App() {
+      const [activeTab, setActiveTab] = useState('overview');
+      const [data, setData] = useState(() => {
+        const parsed = Papa.parse(SAMPLE_CSV, { header: true }).data;
+        return processRows(parsed);
+      });
+
+      const handleFileUpload = (file) => {
+        Papa.parse(file, {
+          header: true,
+          complete: (res) => {
+            const processed = processRows(res.data);
+            setData(processed);
+          }
+        });
+      };
+
+      const forecast = useMemo(() => runForecast(data.cleaned, 5), [data]);
+
+      return (
+        <div className="app-container">
+          {/* Sidebar */}
+          <aside className="sidebar">
+            <div className="sidebar-brand">
+              <div className="brand-icon">🛒</div>
+              <div>
+                <strong style={{ fontSize: '0.95rem' }}>SMART BAZAAR</strong>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Sales Analytics & Forecast</div>
+              </div>
+            </div>
+            <nav className="sidebar-nav">
+              {[
+                ['overview', '📊 Overview'],
+                ['upload', '📁 Upload Dataset'],
+                ['dashboard', '📈 Sales Dashboard'],
+                ['product', '🛍️ Product Analysis'],
+                ['forecast', '🔮 Sales Forecast'],
+                ['explorer', '🗄️ Data Explorer'],
+                ['insights', '💡 Insights & Recs'],
+                ['about', 'ℹ️ About Project']
+              ].map(([id, label]) => (
+                <button key={id} className={`nav-item ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Main Layout */}
+          <div className="main-content">
+            <header className="top-header">
+              <div>
+                <h2>SMART BAZAAR SALES ANALYSIS</h2>
+                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Interactive Retail Analytics System (DWM Mini Project)</p>
+              </div>
+              <span className="badge badge-info">Indian Rupees (₹ INR)</span>
+            </header>
+
+            <main className="page-body">
+              {activeTab === 'overview' && (
+                <div>
+                  <h1 style={{ marginBottom: '1rem' }}>Executive Overview</h1>
+                  <div className="kpi-grid">
+                    <div className="kpi-card">
+                      <span className="kpi-title">Total Revenue</span>
+                      <div className="kpi-value">{formatCurrency(data.totalRev)}</div>
+                      <span className="kpi-footer">Gross turnover</span>
+                    </div>
+                    <div className="kpi-card">
+                      <span className="kpi-title">Total Units Sold</span>
+                      <div className="kpi-value">{data.totalQty.toLocaleString('en-IN')}</div>
+                      <span className="kpi-footer">Volume sold</span>
+                    </div>
+                    <div className="kpi-card">
+                      <span className="kpi-title">Best Selling Product</span>
+                      <div className="kpi-value" style={{ fontSize: '1.2rem' }}>{data.productSummaries[0]?.name || 'N/A'}</div>
+                      <span className="kpi-footer">{data.productSummaries[0]?.totalQuantity} units</span>
+                    </div>
+                    <div className="kpi-card">
+                      <span className="kpi-title">Highest Revenue Item</span>
+                      <div className="kpi-value" style={{ fontSize: '1.2rem' }}>{data.productSummaries[0]?.name || 'N/A'}</div>
+                      <span className="kpi-footer">{formatCurrency(data.productSummaries[0]?.totalRevenue)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'upload' && (
+                <div>
+                  <h1>Upload Custom CSV Dataset</h1>
+                  <div className="upload-dropzone" onClick={() => document.getElementById('csvInput').click()}>
+                    <input type="file" id="csvInput" accept=".csv" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && handleFileUpload(e.target.files[0])} />
+                    <h3>Click or Drag CSV File Here</h3>
+                    <p>Supports Product, Price (₹), Quantity, Date, Category</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'dashboard' && (
+                <div>
+                  <h1>Sales Dashboard</h1>
+                  <div className="charts-grid">
+                    <div className="chart-card">
+                      <h3>Top Products by Revenue (₹)</h3>
+                      <div className="chart-container">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={data.productSummaries.slice(0, 5)} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" tickFormatter={formatCompactINR} />
+                            <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
+                            <Bar dataKey="totalRevenue" fill="#2563eb" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    <div className="chart-card">
+                      <h3>Category-Wise Share</h3>
+                      <div className="chart-container">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={data.categorySummaries} dataKey="totalRevenue" nameKey="category" cx="50%" cy="50%" outerRadius={90} label>
+                              {data.categorySummaries.map((_, i) => (
+                                <Cell key={i} fill={['#2563eb', '#7c3aed', '#0d9488', '#ea580c'][i % 4]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'forecast' && (
+                <div>
+                  <h1>5-Year Sales Forecast</h1>
+                  <div className="chart-card">
+                    <h3>Historical vs Projected 5-Year Revenue</h3>
+                    <div className="chart-container" style={{ height: '360px' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={forecast.chartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis tickFormatter={formatCompactINR} />
+                          <Tooltip formatter={(v, n) => [formatCurrency(v), n]} />
+                          <Legend />
+                          <Line type="monotone" dataKey="actualRevenue" name="Historical Revenue (₹)" stroke="#2563eb" strokeWidth={3} />
+                          <Line type="monotone" dataKey="forecastRevenue" name="5-Yr Forecast Revenue (₹)" stroke="#ea580c" strokeWidth={3} strokeDasharray="5 5" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'explorer' && (
+                <div className="table-container">
+                  <div className="table-header-bar">
+                    <h3>Cleaned Sales Dataset ({data.cleaned.length} Rows)</h3>
+                  </div>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Order ID</th><th>Date</th><th>Product</th><th>Category</th><th>Price (₹)</th><th>Qty</th><th>Revenue (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.cleaned.map(r => (
+                        <tr key={r.id}>
+                          <td>{r.orderId}</td>
+                          <td>{r.date ? r.date.toLocaleDateString('en-IN') : 'N/A'}</td>
+                          <td>{r.productName}</td>
+                          <td><span className="badge badge-info">{r.category}</span></td>
+                          <td>{formatCurrency(r.price)}</td>
+                          <td>{r.quantity}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>{formatCurrency(r.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeTab === 'insights' && (
+                <div>
+                  <h1>Automated Business Insights</h1>
+                  <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                    <h3>🥇 Top Grossing Product: {data.productSummaries[0]?.name}</h3>
+                    <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                      Generates {formatCurrency(data.productSummaries[0]?.totalRevenue)} in sales. Ensure consistent supply chain stocking.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'about' && (
+                <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                  <h1>Smart Bazaar Sales Analysis</h1>
+                  <p style={{ margin: '1rem 0' }}>Data Warehousing & Mining (DWM) College Mini Project.</p>
+                  <ul>
+                    <li>All monetary figures formatted in Indian Rupees (₹ INR).</li>
+                    <li>Built using React, Recharts, and PapaParse.</li>
+                    <li>Supports 5-year sales forecasting via OLS linear regression.</li>
+                  </ul>
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
