@@ -13,14 +13,14 @@ export const ColumnMapperModal = ({ headers, currentMapping, onSave, onClose }) 
   };
 
   const fieldLabels = {
-    [STANDARD_FIELDS.PRODUCT]: 'Product Name *',
-    [STANDARD_FIELDS.PRICE]: 'Unit Price (₹) *',
-    [STANDARD_FIELDS.QUANTITY]: 'Quantity Sold *',
-    [STANDARD_FIELDS.REVENUE]: 'Sales Revenue (₹) (Optional)',
-    [STANDARD_FIELDS.DATE]: 'Order Date (Optional for Forecasting)',
-    [STANDARD_FIELDS.CATEGORY]: 'Category (Optional)',
-    [STANDARD_FIELDS.ORDER_ID]: 'Order ID (Optional)',
-    [STANDARD_FIELDS.REGION]: 'Region / Zone (Optional)'
+    [STANDARD_FIELDS.PRODUCT]: 'Product Name / Sub-Category *',
+    [STANDARD_FIELDS.REVENUE]: 'Sales Revenue / Amount (₹) *',
+    [STANDARD_FIELDS.QUANTITY]: 'Quantity Sold (Auto-defaults to 1)',
+    [STANDARD_FIELDS.PRICE]: 'Unit Price (₹) (Auto-calculated if Amount exists)',
+    [STANDARD_FIELDS.DATE]: 'Order Date (For Monthly Trends & Forecasts)',
+    [STANDARD_FIELDS.CATEGORY]: 'Category / Department',
+    [STANDARD_FIELDS.ORDER_ID]: 'Order ID / Bill Number',
+    [STANDARD_FIELDS.REGION]: 'Region / State / City'
   };
 
   return (
@@ -37,7 +37,7 @@ export const ColumnMapperModal = ({ headers, currentMapping, onSave, onClose }) 
         </div>
 
         <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-          Match your uploaded CSV header columns with the Smart Bazaar analysis fields below.
+          Match your uploaded CSV header columns with the Smart Bazaar analysis fields below. The smart engine auto-detects Kaggle, Superstore, ERP, and POS formats.
         </p>
 
         <div style={{ maxHeight: '360px', overflowY: 'auto', paddingRight: '0.5rem', marginBottom: '1.5rem' }}>
@@ -49,7 +49,7 @@ export const ColumnMapperModal = ({ headers, currentMapping, onSave, onClose }) 
                 value={mapping[fieldKey] || '-- NONE --'}
                 onChange={(e) => handleSelectChange(fieldKey, e.target.value)}
               >
-                <option value="-- NONE --">-- Not Mapped --</option>
+                <option value="-- NONE --">-- Not Mapped (Auto-Handled) --</option>
                 {headers.map(h => (
                   <option key={h} value={h}>{h}</option>
                 ))}

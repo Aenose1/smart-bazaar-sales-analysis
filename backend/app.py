@@ -6,6 +6,7 @@ Technologies: Python, Flask, Flask-CORS, Pandas, Scikit-learn, NumPy
 
 import os
 import io
+import re
 import math
 import json
 from datetime import datetime
@@ -26,31 +27,86 @@ if not os.path.exists(SAMPLE_FILE_PATH):
     SAMPLE_FILE_PATH = os.path.join(BASE_DIR, "sample-sales.csv")
 
 COLUMN_ALIASES = {
-    "product": ["product", "product_name", "productname", "item", "item_name", "title"],
-    "price": ["price", "unit_price", "unitprice", "selling_price", "rate", "cost", "mrp"],
-    "quantity": ["quantity", "units_sold", "unitssold", "qty", "units", "volume", "quantity_sold"],
-    "revenue": ["revenue", "sales_amount", "salesamount", "total_sales", "total_amount", "sales", "amount", "line_total"],
-    "date": ["order_date", "orderdate", "date", "transaction_date", "sale_date", "invoice_date"],
-    "category": ["category", "product_category", "department", "type", "group"],
-    "order_id": ["order_id", "orderid", "transaction_id", "invoice_no", "bill_no", "id"],
-    "region": ["region", "location", "state", "zone", "city", "store_location"]
+    "product": [
+        "productname", "product", "itemname", "item", "description", "itemdescription",
+        "productdescription", "title", "producttitle", "particulars", "commodity",
+        "goods", "sku", "skuname", "article", "articlename", "name",
+        "subcategory", "subcat", "subdepartment", "subgroup", "subclass",
+        "brand", "brandname", "model", "modelname"
+    ],
+    "category": [
+        "category", "productcategory", "itemcategory", "department", "dept",
+        "segment", "producttype", "type", "group", "class", "division",
+        "classification", "sector", "lineofbusiness", "vertical"
+    ],
+    "price": [
+        "unitprice", "sellingprice", "price", "rate", "mrp", "cost", "unitcost",
+        "priceperunit", "itemprice", "listprice", "saleprice", "retailprice",
+        "unitrate", "priceeach", "costprice"
+    ],
+    "quantity": [
+        "quantity", "qty", "unitssold", "quantitysold", "quantityordered",
+        "units", "volume", "pieces", "count", "pcs", "numberofitems",
+        "itemsold", "orderedquantity", "totalunits", "orderquantity"
+    ],
+    "revenue": [
+        "revenue", "sales", "amount", "salesamount", "totalamount", "totalsales",
+        "total", "totalrevenue", "linetotal", "itemtotal", "turnover",
+        "netamount", "nettotal", "grandtotal", "value", "totalvalue",
+        "orderamount", "ordersales"
+    ],
+    "date": [
+        "orderdate", "date", "transactiondate", "invoicedate", "saledate",
+        "billingdate", "purchasedate", "timestamp", "createdat", "datetime",
+        "yearmonth", "period", "month", "transdate", "billdate", "dateofsale"
+    ],
+    "order_id": [
+        "orderid", "transactionid", "invoiceno", "invoiceid", "billno",
+        "receiptno", "ordernumber", "orderreference", "orderno", "transid",
+        "billnumber", "receiptid", "transactionnumber", "id"
+    ],
+    "region": [
+        "region", "state", "city", "location", "zone", "storelocation",
+        "branch", "territory", "market", "country", "province", "district",
+        "place", "store", "storename", "storeid", "area", "address"
+    ]
 }
+
+def to_canonical(s):
+    return re.sub(r"[^a-z0-9]", "", str(s).lower())
 
 def auto_detect_columns(headers):
     mapping = {}
-    normalized = [str(h).strip().lower() for h in headers]
+    canon_map = {to_canonical(h): h for h in headers}
+    used_headers = set()
+
     for field, aliases in COLUMN_ALIASES.items():
         matched = None
         for alias in aliases:
-            if alias in normalized:
-                matched = headers[normalized.index(alias)]
+            if alias in canon_map and canon_map[alias] not in used_headers:
+                matched = canon_map[alias]
                 break
         if not matched:
-            for i, h in enumerate(normalized):
-                if any(alias in h for alias in aliases):
-                    matched = headers[i]
+            for canon_h, orig_h in canon_map.items():
+                if orig_h not in used_headers:
+                    if any(alias in canon_h or canon_h in alias for alias in aliases):
+                        matched = orig_h
+                        break
+        if matched:
+            mapping[field] = matched
+            used_headers.add(matched)
+        else:
+            mapping[field] = None
+
+    if not mapping.get("product"):
+        if mapping.get("category"):
+            mapping["product"] = mapping["category"]
+        else:
+            for h in headers:
+                if any(k in h.lower() for k in ["item", "prod", "desc", "name"]):
+                    mapping["product"] = h
                     break
-        mapping[field] = matched
+
     return mapping
 
 def clean_and_process_df(df, mapping=None):
@@ -69,35 +125,64 @@ def clean_and_process_df(df, mapping=None):
     cleaned_records = []
     
     for idx, row in df.iterrows():
-        p_name = str(row[col_prod]).strip() if col_prod and pd.notna(row[col_prod]) else "Unknown Product"
-        cat = str(row[col_cat]).strip() if col_cat and pd.notna(row[col_cat]) else "General"
-        reg = str(row[col_reg]).strip() if col_reg and pd.notna(row[col_reg]) else "Unspecified"
-        oid = str(row[col_order]).strip() if col_order and pd.notna(row[col_order]) else f"ORD-{idx+1001}"
+        # Product resolution with resilient fallback
+        p_name = ""
+        if col_prod and pd.notna(row.get(col_prod)):
+            p_name = str(row[col_prod]).strip()
+        if not p_name or p_name.lower() in ("nan", "null"):
+            for col_name in df.columns:
+                c_clean = to_canonical(col_name)
+                if any(k in c_clean for k in ("subcategory", "product", "item", "description", "particulars")) and pd.notna(row[col_name]):
+                    p_name = str(row[col_name]).strip()
+                    break
+        if not p_name or p_name.lower() in ("nan", "null"):
+            if col_cat and pd.notna(row.get(col_cat)):
+                p_name = str(row[col_cat]).strip()
+            else:
+                p_name = f"Retail Item #{idx + 1}"
+
+        # Category resolution
+        cat = "General"
+        if col_cat and pd.notna(row.get(col_cat)):
+            cat = str(row[col_cat]).strip()
+
+        # Region resolution
+        reg = "National"
+        if col_reg and pd.notna(row.get(col_reg)):
+            reg = str(row[col_reg]).strip()
+
+        # Order ID resolution
+        oid = f"ORD-{idx + 1001}"
+        if col_order and pd.notna(row.get(col_order)):
+            oid = str(row[col_order]).strip()
 
         # Clean Price
         price = 0.0
-        if col_price and pd.notna(row[col_price]):
+        if col_price and pd.notna(row.get(col_price)):
             try:
-                price = float(str(row[col_price]).replace("₹", "").replace(",", "").replace("$", "").strip())
+                price = float(re.sub(r"[^0-9.]", "", str(row[col_price])))
             except ValueError:
                 price = 0.0
 
         # Clean Quantity
-        qty = 0.0
-        if col_qty and pd.notna(row[col_qty]):
+        qty = 1.0
+        if col_qty and pd.notna(row.get(col_qty)):
             try:
-                qty = float(str(row[col_qty]).replace(",", "").strip())
+                qty = float(re.sub(r"[^0-9.]", "", str(row[col_qty])))
+                if qty <= 0:
+                    qty = 1.0
             except ValueError:
-                qty = 0.0
+                qty = 1.0
 
         # Clean Revenue
         rev = 0.0
-        if col_rev and pd.notna(row[col_rev]):
+        if col_rev and pd.notna(row.get(col_rev)):
             try:
-                rev = float(str(row[col_rev]).replace("₹", "").replace(",", "").replace("$", "").strip())
+                rev = float(re.sub(r"[^0-9.]", "", str(row[col_rev])))
             except ValueError:
                 rev = 0.0
 
+        # Derive symmetric values
         if rev <= 0 and price > 0 and qty > 0:
             rev = price * qty
         elif price <= 0 and rev > 0 and qty > 0:
@@ -106,18 +191,27 @@ def clean_and_process_df(df, mapping=None):
         # Clean Date
         date_obj = None
         date_str = None
-        if col_date and pd.notna(row[col_date]):
+        raw_d = None
+        if col_date and pd.notna(row.get(col_date)):
             raw_d = str(row[col_date]).strip()
-            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d"):
+        else:
+            for col_name in df.columns:
+                c_clean = to_canonical(col_name)
+                if any(k in c_clean for k in ("date", "time", "yearmonth", "month")) and pd.notna(row[col_name]):
+                    raw_d = str(row[col_name]).strip()
+                    break
+
+        if raw_d and raw_d.lower() not in ("nan", "null"):
+            for fmt in ("%Y-%m-%d", "%Y-%m", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d", "%d.%m.%Y", "%d-%b-%Y", "%d-%B-%Y"):
                 try:
-                    dt = datetime.strptime(raw_d, fmt)
+                    dt = datetime.strptime(raw_d[:10] if len(raw_d) >= 10 and fmt != "%Y-%m" else raw_d, fmt)
                     date_obj = dt
                     date_str = dt.strftime("%Y-%m-%d")
                     break
                 except ValueError:
                     continue
 
-        if p_name and (rev > 0 or (price > 0 and qty > 0)):
+        if p_name and (rev > 0 or (price > 0 and qty > 0) or not math.isnan(rev)):
             cleaned_records.append({
                 "id": idx + 1,
                 "orderId": oid,
